@@ -1,0 +1,959 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "FinZinc API",
+    "description": "FinZinc Payment Processing API for deposit and withdrawal operations",
+    "version": "1.0.0",
+    "contact": {
+      "name": "FinZinc Support",
+      "url": "https://finzinc.net"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api.finzinc.net",
+      "description": "Production environment"
+    },
+    {
+      "url": "https://api-test.finzinc.net",
+      "description": "Test environment"
+    }
+  ],
+  "paths": {
+    "/account_balance": {
+      "get": {
+        "tags": ["Account"],
+        "summary": "Get Account Balance",
+        "description": "Retrieve the current account balance for the authenticated merchant",
+        "operationId": "getAccountBalance",
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "query",
+            "description": "Unique merchant account identifier",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "example": "merchant_acc_001"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Account balance retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "balance": {
+                      "type": "string",
+                      "description": "Current account balance",
+                      "example": "10000.00"
+                    },
+                    "currency": {
+                      "type": "string",
+                      "description": "Currency code (ISO 4217)",
+                      "example": "USD"
+                    },
+                    "account_id": {
+                      "type": "string",
+                      "description": "Merchant account identifier"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "Timestamp of the balance query"
+                    }
+                  },
+                  "required": ["balance", "currency", "account_id", "timestamp"]
+                },
+                "examples": {
+                  "Success": {
+                    "value": {
+                      "balance": "10000.00",
+                      "currency": "USD",
+                      "account_id": "merchant_acc_001",
+                      "timestamp": "2026-03-31T23:48:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "InvalidAccountId": {
+                    "value": {
+                      "error": "INVALID_REQUEST",
+                      "message": "account_id is required",
+                      "timestamp": "2026-03-31T23:48:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Invalid API credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "Unauthorized": {
+                    "value": {
+                      "error": "UNAUTHORIZED",
+                      "message": "Invalid or expired token",
+                      "timestamp": "2026-03-31T23:48:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
+    "/initiate": {
+      "post": {
+        "tags": ["Payments"],
+        "summary": "Create Payment",
+        "description": "Initiate a new payment transaction (deposit or withdrawal)",
+        "operationId": "createPayment",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentCreateDTO"
+              },
+              "examples": {
+                "DepositUPI": {
+                  "summary": "Deposit via UPI",
+                  "value": {
+                    "sum": "100.00",
+                    "status_url": "https://merchant.com/status",
+                    "currency_code": "INR",
+                    "external_id": "ext_20260331_001",
+                    "operation": "deposit",
+                    "scheme": "direct",
+                    "channel": "upi",
+                    "account_id": "merchant_acc_001",
+                    "account_name": "My Store",
+                    "redirect_url": "https://merchant.com/success",
+                    "server_mode": false,
+                    "deposit_details": {
+                      "bank_name": "HDFC Bank",
+                      "sender_name": "John Doe",
+                      "vpa": "john.doe@okaxis"
+                    }
+                  }
+                },
+                "DepositCard": {
+                  "summary": "Deposit via Card",
+                  "value": {
+                    "sum": "250.50",
+                    "status_url": "https://merchant.com/status",
+                    "currency_code": "USD",
+                    "external_id": "ext_20260331_002",
+                    "operation": "deposit",
+                    "scheme": "gateway",
+                    "channel": "express_upi",
+                    "account_id": "merchant_acc_001",
+                    "account_name": "My Store",
+                    "redirect_url": "https://merchant.com/success",
+                    "server_mode": false,
+                    "deposit_details": {
+                      "bank_name": "ICICI Bank",
+                      "sender_name": "Jane Smith",
+                      "card_data": {
+                        "card_number": "4532123456789012",
+                        "expiry_month": 12,
+                        "expiry_year": 2028,
+                        "cvv": "123",
+                        "holder_name": "JANE SMITH"
+                      }
+                    }
+                  }
+                },
+                "WithdrawalUPI": {
+                  "summary": "Withdrawal via UPI",
+                  "value": {
+                    "sum": "500.00",
+                    "status_url": "https://merchant.com/status",
+                    "currency_code": "INR",
+                    "external_id": "ext_20260331_003",
+                    "operation": "withdrawal",
+                    "scheme": "direct",
+                    "channel": "upi",
+                    "account_id": "merchant_acc_001",
+                    "account_name": "My Store",
+                    "server_mode": true,
+                    "withdrawal_details": {
+                      "bank_name": "SBI Bank",
+                      "beneficiary_name": "Alice Johnson",
+                      "vpa": "alice.johnson@okaxis"
+                    }
+                  }
+                },
+                "WithdrawalCard": {
+                  "summary": "Withdrawal to Card",
+                  "value": {
+                    "sum": "1000.00",
+                    "status_url": "https://merchant.com/status",
+                    "currency_code": "USD",
+                    "external_id": "ext_20260331_004",
+                    "operation": "withdrawal",
+                    "scheme": "direct",
+                    "channel": "fast_upi",
+                    "account_id": "merchant_acc_001",
+                    "account_name": "My Store",
+                    "server_mode": true,
+                    "withdrawal_details": {
+                      "bank_name": "Axis Bank",
+                      "card_no": "5412345678901234",
+                      "beneficiary_name": "Bob Wilson",
+                      "ifsc_code": "AXIS0000001"
+                    }
+                  }
+                },
+                "WithdrawalIMPS": {
+                  "summary": "Withdrawal via IMPS (Bank Transfer)",
+                  "value": {
+                    "sum": "750.00",
+                    "status_url": "https://merchant.com/status",
+                    "currency_code": "INR",
+                    "external_id": "ext_20260331_005",
+                    "operation": "withdrawal",
+                    "scheme": "direct",
+                    "channel": "imps",
+                    "account_id": "merchant_acc_001",
+                    "account_name": "My Store",
+                    "server_mode": true,
+                    "withdrawal_details": {
+                      "bank_name": "HDFC Bank",
+                      "beneficiary_name": "Charlie Brown",
+                      "bank_account": "123456789012",
+                      "ifsc_code": "HDFC0002060"
+                    }
+                  }
+                },
+                "WithdrawalIBAN": {
+                  "summary": "Withdrawal via IBAN (International)",
+                  "value": {
+                    "sum": "500.00",
+                    "status_url": "https://merchant.com/status",
+                    "currency_code": "EUR",
+                    "external_id": "ext_20260331_006",
+                    "operation": "withdrawal",
+                    "scheme": "gateway",
+                    "account_id": "merchant_acc_001",
+                    "account_name": "My Store",
+                    "server_mode": true,
+                    "withdrawal_details": {
+                      "bank_name": "Deutsche Bank",
+                      "beneficiary_name": "David Mueller",
+                      "iban_number": "DE89370400440532013000",
+                      "tax_reference": "DE123456789"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Payment created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "transaction_id": {
+                      "type": "string",
+                      "description": "Unique transaction identifier"
+                    },
+                    "external_id": {
+                      "type": "string",
+                      "description": "Merchant external identifier"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": ["pending", "processing", "success", "success_partial", "success_adjusted", "failed"],
+                      "description": "Current transaction status"
+                    },
+                    "payment_url": {
+                      "type": "string",
+                      "format": "uri",
+                      "description": "Payment redirect URL (for non-server mode operations)"
+                    },
+                    "sum": {
+                      "type": "string",
+                      "description": "Payment amount"
+                    },
+                    "currency_code": {
+                      "type": "string",
+                      "description": "Currency code"
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "Payment creation timestamp"
+                    }
+                  },
+                  "required": ["transaction_id", "external_id", "status"]
+                },
+                "examples": {
+                  "SuccessDeposit": {
+                    "summary": "Successful deposit creation",
+                    "value": {
+                      "transaction_id": "txn_fin_123456",
+                      "external_id": "ext_20260331_001",
+                      "status": "pending",
+                      "payment_url": "https://payment.finzinc.net/pay/txn_fin_123456",
+                      "sum": "100.00",
+                      "currency_code": "INR",
+                      "created_at": "2026-03-31T23:48:00Z"
+                    }
+                  },
+                  "SuccessWithdrawal": {
+                    "summary": "Successful withdrawal creation",
+                    "value": {
+                      "transaction_id": "txn_fin_789012",
+                      "external_id": "ext_20260331_003",
+                      "status": "processing",
+                      "sum": "500.00",
+                      "currency_code": "INR",
+                      "created_at": "2026-03-31T23:48:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "ValidationError": {
+                    "value": {
+                      "error": "VALIDATION_ERROR",
+                      "message": "Invalid sum format",
+                      "timestamp": "2026-03-31T23:48:00Z"
+                    }
+                  },
+                  "MissingField": {
+                    "value": {
+                      "error": "MISSING_FIELD",
+                      "message": "Beneficiary name is required for card, IMPS, or UPI withdrawals.",
+                      "timestamp": "2026-03-31T23:48:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Invalid API credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
+    "/v1/payments/{id}/check": {
+      "get": {
+        "tags": ["Payments"],
+        "summary": "Get Payment Status",
+        "description": "Retrieve the current status of a payment by its internal ID or merchant external_id.\n\nAlways check `status` field. Terminal statuses: `success`, `success_partial`, `success_adjusted`, `failed`.\n\nStatus mapping:\n- `COMPLETED` → `success`\n- `PARTIALLY_COMPLETED` → `success_partial`\n- `ADJUSTING_UP` / `ADJUSTING_DOWN` confirmed → `success_adjusted`\n- `FAILED` / `EXPIRED` / `CANCELED` → `failed`\n- In-progress states → `pending` or `processing`",
+        "operationId": "getPaymentStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Payment ID (transaction_id) or merchant external_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "txn_fin_123456"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Payment status retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentStatusResponse"
+                },
+                "examples": {
+                  "Success": {
+                    "summary": "Completed deposit",
+                    "value": {
+                      "transaction_id": "txn_fin_123456",
+                      "external_id": "ext_20260331_001",
+                      "status": "success",
+                      "operation": "deposit",
+                      "sum": "100.00",
+                      "currency_code": "INR",
+                      "created_at": "2026-03-31T23:48:00Z",
+                      "updated_at": "2026-03-31T23:51:00Z"
+                    }
+                  },
+                  "SuccessPartial": {
+                    "summary": "Partially completed (underpaid)",
+                    "value": {
+                      "transaction_id": "txn_fin_123457",
+                      "external_id": "ext_20260331_007",
+                      "status": "success_partial",
+                      "operation": "deposit",
+                      "sum": "100.00",
+                      "sum_processed": "80.00",
+                      "currency_code": "INR",
+                      "created_at": "2026-03-31T23:48:00Z",
+                      "updated_at": "2026-03-31T23:52:00Z"
+                    }
+                  },
+                  "SuccessAdjusted": {
+                    "summary": "Amount was adjusted (up or down)",
+                    "value": {
+                      "transaction_id": "txn_fin_123458",
+                      "external_id": "ext_20260331_008",
+                      "status": "success_adjusted",
+                      "operation": "deposit",
+                      "sum": "100.00",
+                      "sum_processed": "150.00",
+                      "correction": "up",
+                      "currency_code": "INR",
+                      "created_at": "2026-03-31T23:48:00Z",
+                      "updated_at": "2026-03-31T23:54:00Z"
+                    }
+                  },
+                  "Pending": {
+                    "summary": "Payment still in progress",
+                    "value": {
+                      "transaction_id": "txn_fin_123459",
+                      "external_id": "ext_20260331_009",
+                      "status": "pending",
+                      "operation": "deposit",
+                      "sum": "200.00",
+                      "currency_code": "INR",
+                      "created_at": "2026-03-31T23:48:00Z",
+                      "updated_at": "2026-03-31T23:48:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Invalid API credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Payment not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "NotFound": {
+                    "value": {
+                      "error": "NOT_FOUND",
+                      "message": "Payment with id (txn_fin_123456) not found",
+                      "timestamp": "2026-03-31T23:48:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
+    "/v1/payments/{id}/upload_receipt": {
+      "post": {
+        "tags": ["Payments"],
+        "summary": "Upload UTR / Payment Receipt (H2H)",
+        "description": "In server-to-server (`server_mode: true`) mode, confirm a deposit by submitting the UTR (Unique Transaction Reference) and optionally attaching receipt files.\n\nSend as `multipart/form-data`. The `utr` field is required; up to 3 receipt image files can be attached.\n\nExample (curl):\n```bash\ncurl -X POST \"https://api.finzinc.net/v1/payments/txn_fin_123456/upload_receipt\" \\\n  -H \"Authorization: Bearer <token>\" \\\n  -F \"utr=123456789012\" \\\n  -F \"file=@/path/to/receipt.png\"\n```",
+        "operationId": "uploadPaymentReceipt",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Payment ID (transaction_id) returned from /initiate",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "txn_fin_123456"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["utr"],
+                "properties": {
+                  "utr": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 22,
+                    "description": "Unique Transaction Reference number from the bank",
+                    "example": "123456789012"
+                  },
+                  "file": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    },
+                    "maxItems": 3,
+                    "description": "Receipt image files (PNG, JPG, PDF). Optional, max 3 files."
+                  }
+                }
+              },
+              "encoding": {
+                "utr": {
+                  "style": "form",
+                  "explode": true
+                },
+                "file": {
+                  "style": "form",
+                  "explode": true
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Receipt uploaded successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "example": true
+                    }
+                  },
+                  "required": ["ok"]
+                },
+                "examples": {
+                  "Success": {
+                    "value": {
+                      "ok": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request — missing or invalid UTR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "MissingUTR": {
+                    "value": {
+                      "error": "MISSING_FIELD",
+                      "message": "utr is required",
+                      "timestamp": "2026-03-31T23:48:00Z"
+                    }
+                  },
+                  "InvalidUTR": {
+                    "value": {
+                      "error": "VALIDATION_ERROR",
+                      "message": "utr must be between 10 and 22 characters",
+                      "timestamp": "2026-03-31T23:48:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Invalid API credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Payment not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "NotFound": {
+                    "value": {
+                      "error": "NOT_FOUND",
+                      "message": "Payment with id (txn_fin_123456) not found",
+                      "timestamp": "2026-03-31T23:48:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "PaymentStatusResponse": {
+        "type": "object",
+        "description": "Current state of a payment transaction",
+        "required": ["transaction_id", "external_id", "status", "operation", "sum", "currency_code", "created_at", "updated_at"],
+        "properties": {
+          "transaction_id": {
+            "type": "string",
+            "description": "Internal FinZinc payment identifier",
+            "example": "txn_fin_123456"
+          },
+          "external_id": {
+            "type": "string",
+            "description": "Merchant-provided external identifier",
+            "example": "ext_20260331_001"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "processing",
+              "success",
+              "success_partial",
+              "success_adjusted",
+              "failed"
+            ],
+            "description": "Payment status:\n- `pending` — created, awaiting payer action\n- `processing` — payment received, being verified\n- `success` — fully completed (COMPLETED)\n- `success_partial` — partially completed, funds received but less than requested (PARTIALLY_COMPLETED)\n- `success_adjusted` — completed with amount correction up or down (ADJUSTING_UP/ADJUSTING_DOWN confirmed)\n- `failed` — failed, expired, or cancelled",
+            "example": "success"
+          },
+          "operation": {
+            "type": "string",
+            "enum": ["deposit", "withdrawal"],
+            "description": "Transaction type",
+            "example": "deposit"
+          },
+          "sum": {
+            "type": "string",
+            "description": "Originally requested payment amount",
+            "example": "100.00"
+          },
+          "sum_processed": {
+            "type": "string",
+            "description": "Actually processed amount. Present when differs from sum (success_partial or success_adjusted).",
+            "example": "150.00"
+          },
+          "correction": {
+            "type": "string",
+            "enum": ["up", "down"],
+            "description": "Direction of amount correction. Present only when status is success_adjusted.",
+            "example": "up"
+          },
+          "currency_code": {
+            "type": "string",
+            "description": "Currency code (ISO 4217)",
+            "example": "INR"
+          },
+          "channel": {
+            "type": "string",
+            "description": "Payment channel used",
+            "example": "upi"
+          },
+          "fail_reason": {
+            "type": "string",
+            "description": "Human-readable failure reason. Present only when status is failed.",
+            "example": "Payer did not complete payment within time limit"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Payment creation timestamp",
+            "example": "2026-03-31T23:48:00Z"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Last status update timestamp",
+            "example": "2026-03-31T23:51:00Z"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Error code"
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable error message"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp of the error"
+          }
+        },
+        "required": ["error", "message"]
+      },
+      "DepositInfoDTO": {
+        "type": "object",
+        "description": "Deposit credentials",
+        "properties": {
+          "bank_name": {
+            "type": "string",
+            "maxLength": 128,
+            "description": "Name of the bank"
+          },
+          "sender_name": {
+            "type": "string",
+            "maxLength": 128,
+            "description": "Full name of the sender/depositor"
+          },
+          "card_data": {
+            "$ref": "#/components/schemas/PaymentCardInfo"
+          },
+          "vpa": {
+            "type": "string",
+            "pattern": "^[a-z0-9-_.]{1,128}@[a-z0-9]{1,128}$",
+            "description": "VPA (Virtual Payment Address) in format name@bank (e.g., user@okaxis)"
+          }
+        }
+      },
+      "WithdrawalInfoDTO": {
+        "type": "object",
+        "description": "Withdrawal credentials",
+        "properties": {
+          "bank_name": {
+            "type": "string",
+            "description": "Name of the beneficiary bank"
+          },
+          "card_no": {
+            "type": "string",
+            "description": "Card number for withdrawal (credit/debit card)"
+          },
+          "beneficiary_name": {
+            "type": "string",
+            "maxLength": 256,
+            "description": "Beneficiary name (required for card, IMPS, or UPI withdrawals)"
+          },
+          "ifsc_code": {
+            "type": "string",
+            "pattern": "^[a-z]{4}0[a-z0-9]{6}$",
+            "description": "IFSC code in format XXXX0XXXXXX (e.g., HDFC0002060). Required for IMPS withdrawals."
+          },
+          "bank_account": {
+            "type": "string",
+            "minLength": 9,
+            "maxLength": 32,
+            "description": "Beneficiary bank account number"
+          },
+          "vpa": {
+            "type": "string",
+            "pattern": "^[a-z0-9-_.]{1,128}@[a-z0-9]{1,128}$",
+            "description": "VPA (Virtual Payment Address) in format name@bank (e.g., user@okaxis)"
+          },
+          "iban_number": {
+            "type": "string",
+            "description": "International Bank Account Number (IBAN)"
+          },
+          "tax_reference": {
+            "type": "string",
+            "description": "Tax reference number"
+          }
+        }
+      },
+      "PaymentCardInfo": {
+        "type": "object",
+        "description": "Payment card information",
+        "properties": {
+          "card_number": {
+            "type": "string",
+            "description": "Card number (will be validated as credit card)"
+          },
+          "expiry_month": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12,
+            "description": "Card expiry month"
+          },
+          "expiry_year": {
+            "type": "integer",
+            "description": "Card expiry year (2-digit or 4-digit)"
+          },
+          "cvv": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 4,
+            "description": "Card CVV/CVC code"
+          },
+          "holder_name": {
+            "type": "string",
+            "description": "Cardholder name"
+          }
+        }
+      },
+      "PaymentCreateDTO": {
+        "type": "object",
+        "description": "Payment creation request",
+        "required": [
+          "sum",
+          "status_url",
+          "currency_code",
+          "external_id",
+          "operation",
+          "scheme",
+          "account_id"
+        ],
+        "properties": {
+          "sum": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d{1,2})?$",
+            "description": "Payment amount (money format)"
+          },
+          "status_url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Callback URL for payment status notifications"
+          },
+          "currency_code": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$",
+            "description": "Currency code (ISO 4217, e.g., USD, EUR, INR)"
+          },
+          "external_id": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 64,
+            "description": "Unique transaction identifier from merchant"
+          },
+          "operation": {
+            "type": "string",
+            "enum": ["deposit", "withdrawal"],
+            "description": "Transaction type: deposit (collect) or withdrawal (payout)"
+          },
+          "scheme": {
+            "type": "string",
+            "enum": ["direct", "gateway"],
+            "description": "Payment scheme type"
+          },
+          "channel": {
+            "type": "string",
+            "enum": ["upi", "upi_intent", "imps", "fast_upi", "express_upi"],
+            "description": "Payment channel (optional)"
+          },
+          "account_id": {
+            "type": "string",
+            "maxLength": 128,
+            "description": "Merchant account identifier"
+          },
+          "account_name": {
+            "type": "string",
+            "maxLength": 128,
+            "description": "Merchant account name (optional)"
+          },
+          "redirect_url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Redirect URL after payment completion. Required if server_mode is false and operation is 'deposit'"
+          },
+          "server_mode": {
+            "type": "boolean",
+            "description": "Whether to operate in server-to-server mode (no browser redirect)"
+          },
+          "deposit_details": {
+            "$ref": "#/components/schemas/DepositInfoDTO"
+          },
+          "withdrawal_details": {
+            "$ref": "#/components/schemas/WithdrawalInfoDTO"
+          },
+          "traffic_type": {
+            "type": "string",
+            "description": "Traffic classification (optional)"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "Bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT token in format: Bearer <token>"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Account",
+      "description": "Account and balance operations"
+    },
+    {
+      "name": "Payments",
+      "description": "Payment transaction operations (create, confirm, check status)"
+    }
+  ]
+}
