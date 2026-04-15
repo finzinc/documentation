@@ -26,7 +26,7 @@
           "Payments"
         ],
         "summary": "Get Payment Status",
-        "description": "Retrieve the current status of a payment by its internal ID or merchant external_id.\n\nAlways check `status` field. Terminal statuses: `success`, `success_partial`, `success_adjusted`, `failed`.\n\nStatus mapping:\n- `COMPLETED` \u2192 `success`\n- `PARTIALLY_COMPLETED` \u2192 `success_partial`\n- `ADJUSTING_UP` / `ADJUSTING_DOWN` confirmed \u2192 `success_adjusted`\n- `FAILED` / `EXPIRED` / `CANCELED` \u2192 `failed`\n- In-progress states \u2192 `pending` or `processing`",
+        "description": "Retrieve the current status of a payment by its internal ID or merchant external_id.\n\nAlways check the `result` field:\n- `awaiting` \u2014 payment created, waiting for payer action\n- `processing` \u2014 payment received, being verified\n- `success` \u2014 fully completed, funds settled\n- `success_partial` \u2014 partially completed, funds received but less than requested\n- `success_adjusted` \u2014 completed with amount correction (up or down)\n- `error` \u2014 payment encountered an error\n- `failed` \u2014 payment failed, expired, or cancelled",
         "operationId": "getPaymentStatus",
         "parameters": [
           {
@@ -37,7 +37,7 @@
             "schema": {
               "type": "string"
             },
-            "example": "txn_fin_123456"
+            "example": "019d8619-f711-76b7-b0e1-574328b5baf0"
           }
         ],
         "responses": {
@@ -49,59 +49,22 @@
                   "$ref": "#/components/schemas/PaymentStatusResponse"
                 },
                 "examples": {
-                  "Success": {
-                    "summary": "Completed deposit",
+                  "Awaiting": {
+                    "summary": "Payment awaiting payer",
                     "value": {
-                      "transaction_id": "txn_fin_123456",
-                      "external_id": "ext_20260331_001",
-                      "status": "success",
-                      "operation": "deposit",
-                      "sum": "100.00",
+                      "operation_id": "019d861d-ffd1-7b37-89d6-6fda2e9825eb",
+                      "channel": "UPI",
+                      "redirect_url": "https://paytopay3.pserv-iner.in/example?method=upi&prevId=null",
+                      "external_id": "ext_20260331_005",
+                      "result": "awaiting",
+                      "client_amount": null,
+                      "rejection_cause": null,
+                      "requested_sum": "300.00",
                       "currency_code": "INR",
-                      "created_at": "2026-03-31T23:48:00Z",
-                      "updated_at": "2026-03-31T23:51:00Z"
-                    }
-                  },
-                  "SuccessPartial": {
-                    "summary": "Partially completed (underpaid)",
-                    "value": {
-                      "transaction_id": "txn_fin_123457",
-                      "external_id": "ext_20260331_007",
-                      "status": "success_partial",
-                      "operation": "deposit",
-                      "sum": "100.00",
-                      "sum_processed": "80.00",
-                      "currency_code": "INR",
-                      "created_at": "2026-03-31T23:48:00Z",
-                      "updated_at": "2026-03-31T23:52:00Z"
-                    }
-                  },
-                  "SuccessAdjusted": {
-                    "summary": "Amount was adjusted (up or down)",
-                    "value": {
-                      "transaction_id": "txn_fin_123458",
-                      "external_id": "ext_20260331_008",
-                      "status": "success_adjusted",
-                      "operation": "deposit",
-                      "sum": "100.00",
-                      "sum_processed": "150.00",
-                      "correction": "up",
-                      "currency_code": "INR",
-                      "created_at": "2026-03-31T23:48:00Z",
-                      "updated_at": "2026-03-31T23:54:00Z"
-                    }
-                  },
-                  "Pending": {
-                    "summary": "Payment still in progress",
-                    "value": {
-                      "transaction_id": "txn_fin_123459",
-                      "external_id": "ext_20260331_009",
-                      "status": "pending",
-                      "operation": "deposit",
-                      "sum": "200.00",
-                      "currency_code": "INR",
-                      "created_at": "2026-03-31T23:48:00Z",
-                      "updated_at": "2026-03-31T23:48:00Z"
+                      "opened_at": "2026-04-13T09:13:26.228Z",
+                      "settled_at": null,
+                      "transfer_details": null,
+                      "valid_until": null
                     }
                   },
                   "Error": {
@@ -109,7 +72,7 @@
                     "value": {
                       "operation_id": "019d861d-ffd1-7b37-89d6-6fda2e9825eb",
                       "channel": "UPI",
-                      "redirect_url": "https://paytopay3.pserv-iner.in/example",
+                      "redirect_url": "https://paytopay3.pserv-iner.in/example?method=upi&prevId=null",
                       "external_id": "ext_20260331_005",
                       "result": "error",
                       "client_amount": null,
@@ -118,6 +81,24 @@
                       "currency_code": "INR",
                       "opened_at": "2026-04-13T09:13:26.228Z",
                       "settled_at": null,
+                      "transfer_details": null,
+                      "valid_until": null
+                    }
+                  },
+                  "Success": {
+                    "summary": "Payment completed",
+                    "value": {
+                      "operation_id": "019d861d-ffd1-7b37-89d6-6fda2e9825eb",
+                      "channel": "UPI",
+                      "redirect_url": null,
+                      "external_id": "ext_20260331_005",
+                      "result": "success",
+                      "client_amount": "300.00",
+                      "rejection_cause": null,
+                      "requested_sum": "300.00",
+                      "currency_code": "INR",
+                      "opened_at": "2026-04-13T09:13:26.228Z",
+                      "settled_at": "2026-04-13T09:15:10.000Z",
                       "transfer_details": null,
                       "valid_until": null
                     }
@@ -651,7 +632,87 @@
           {
             "Bearer": []
           }
-        ]
+        ],
+        "callbacks": {
+          "onPaymentStatusChange": {
+            "{$request.body#/status_url}": {
+              "post": {
+                "summary": "Webhook \u2014 payment status change",
+                "description": "\u041a\u0430\u0436\u0434\u044b\u0439 \u0432\u0435\u0431\u0445\u0443\u043a \u0441\u043e\u0434\u0435\u0440\u0436\u0438\u0442 \u0437\u0430\u0433\u043e\u043b\u043e\u0432\u043e\u043a `signature-v1` \u2014 RSA-SHA256 \u043f\u043e\u0434\u043f\u0438\u0441\u044c \u0442\u0435\u043b\u0430 \u0437\u0430\u043f\u0440\u043e\u0441\u0430.\n\u041d\u0435\u043e\u0431\u0445\u043e\u0434\u0438\u043c\u043e \u0432\u0435\u0440\u0438\u0444\u0438\u0446\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u043f\u043e\u0434\u043f\u0438\u0441\u044c \u043f\u0435\u0440\u0435\u0434 \u043e\u0431\u0440\u0430\u0431\u043e\u0442\u043a\u043e\u0439 \u0432\u0435\u0431\u0445\u0443\u043a\u0430.\n\n\u041f\u0440\u0438\u043c\u0435\u0440 \u0432\u0435\u0440\u0438\u0444\u0438\u043a\u0430\u0446\u0438\u0438 (Node.js):\n```js\nimport { createPublicKey, verify } from \"node:crypto\";\n\nasync function verifyWebhook(body, request) {\n  const sig = request.headers[\"signature-v1\"];\n  const pubKey = createPublicKey(\n    \"-----BEGIN RSA PUBLIC KEY-----\\n\" +\n    \"<\u043a\u043b\u044e\u0447 \u0438\u0437 API Keys \u043f\u0430\u043d\u0435\u043b\u0438>\" +\n    \"\\n-----END RSA PUBLIC KEY-----\"\n  );\n  return verify(\n    \"SHA256\",\n    Buffer.from(JSON.stringify(body)),\n    pubKey,\n    Buffer.from(sig, \"base64\")\n  );\n}\n```\n\n**\u041b\u043e\u0433\u0438\u043a\u0430 \u043e\u0442\u0432\u0435\u0442\u0430 \u043d\u0430 \u0432\u0435\u0431\u0445\u0443\u043a:**\n- `200` \u0438\u043b\u0438 `201` \u2014 \u043f\u043b\u0430\u0442\u0451\u0436 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0451\u043d, \u0441\u0442\u0430\u0442\u0443\u0441 \u043f\u0435\u0440\u0435\u0445\u043e\u0434\u0438\u0442 \u0432 \u0444\u0438\u043d\u0430\u043b\u044c\u043d\u044b\u0439\n- `405` \u2014 \u043c\u0435\u0440\u0447\u0430\u043d\u0442 \u043e\u0442\u043a\u043b\u043e\u043d\u044f\u0435\u0442 \u0438\u0437\u043c\u0435\u043d\u0435\u043d\u0438\u0435 (\u0442\u043e\u043b\u044c\u043a\u043e \u0435\u0441\u043b\u0438 `can_be_declined_by_merchant: true`)\n- \u0414\u0440\u0443\u0433\u0438\u0435 \u043a\u043e\u0434\u044b `4xx/5xx` \u2014 \u0441\u0438\u0441\u0442\u0435\u043c\u0430 \u043f\u043e\u0432\u0442\u043e\u0440\u044f\u0435\u0442 \u0434\u043e\u0441\u0442\u0430\u0432\u043a\u0443 \u0434\u043e 24 \u0447\u0430\u0441\u043e\u0432\n\n**\u0421\u0442\u0430\u0442\u0443\u0441\u044b \u0432 \u0432\u0435\u0431\u0445\u0443\u043a\u0435:**\n- `awaiting` \u2014 \u043e\u0436\u0438\u0434\u0430\u0435\u0442 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044f \u043f\u043b\u0430\u0442\u0435\u043b\u044c\u0449\u0438\u043a\u0430\n- `processing` \u2014 \u043e\u0431\u0440\u0430\u0431\u0430\u0442\u044b\u0432\u0430\u0435\u0442\u0441\u044f\n- `success` \u2014 \u0443\u0441\u043f\u0435\u0448\u043d\u043e \u0437\u0430\u0432\u0435\u0440\u0448\u0451\u043d\n- `success_partial` \u2014 \u0447\u0430\u0441\u0442\u0438\u0447\u043d\u043e \u0437\u0430\u0432\u0435\u0440\u0448\u0451\u043d\n- `success_adjusted` \u2014 \u0437\u0430\u0432\u0435\u0440\u0448\u0451\u043d \u0441 \u043a\u043e\u0440\u0440\u0435\u043a\u0442\u0438\u0440\u043e\u0432\u043a\u043e\u0439 \u0441\u0443\u043c\u043c\u044b\n- `error` \u2014 \u043e\u0448\u0438\u0431\u043a\u0430\n- `failed` \u2014 \u043e\u0442\u043a\u043b\u043e\u043d\u0451\u043d, \u0438\u0441\u0442\u0451\u043a \u0438\u043b\u0438 \u043e\u0442\u043c\u0435\u043d\u0451\u043d",
+                "parameters": [
+                  {
+                    "in": "header",
+                    "name": "signature-v1",
+                    "description": "RSA-SHA256 \u043f\u043e\u0434\u043f\u0438\u0441\u044c \u0442\u0435\u043b\u0430 \u0432\u0435\u0431\u0445\u0443\u043a\u0430 (base64). \u041f\u043e\u043b\u0443\u0447\u0438\u0442\u044c \u043f\u0443\u0431\u043b\u0438\u0447\u043d\u044b\u0439 \u043a\u043b\u044e\u0447 \u043c\u043e\u0436\u043d\u043e \u0432 \u043f\u0430\u043d\u0435\u043b\u0438 API Keys.",
+                    "schema": {
+                      "type": "string"
+                    },
+                    "required": true
+                  }
+                ],
+                "requestBody": {
+                  "required": true,
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "$ref": "#/components/schemas/PaymentStatusResponse"
+                      },
+                      "examples": {
+                        "Awaiting": {
+                          "summary": "Payment awaiting payer",
+                          "value": {
+                            "operation_id": "019d8619-f711-76b7-b0e1-574328b5baf0",
+                            "channel": "UPI",
+                            "redirect_url": "https://paytopay3.pserv-iner.in/example?method=upi&prevId=null",
+                            "external_id": "ext_20260331_006",
+                            "result": "awaiting",
+                            "client_amount": null,
+                            "rejection_cause": null,
+                            "requested_sum": "300.00",
+                            "currency_code": "INR",
+                            "opened_at": "2026-04-13T09:09:01.845Z",
+                            "settled_at": null,
+                            "transfer_details": null,
+                            "valid_until": null
+                          }
+                        },
+                        "Success": {
+                          "summary": "Payment completed",
+                          "value": {
+                            "operation_id": "019d8619-f711-76b7-b0e1-574328b5baf0",
+                            "channel": "UPI",
+                            "redirect_url": null,
+                            "external_id": "ext_20260331_006",
+                            "result": "success",
+                            "client_amount": "300.00",
+                            "rejection_cause": null,
+                            "requested_sum": "300.00",
+                            "currency_code": "INR",
+                            "opened_at": "2026-04-13T09:09:01.845Z",
+                            "settled_at": "2026-04-13T09:11:30.000Z",
+                            "transfer_details": null,
+                            "valid_until": null
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "responses": {
+                  "200": {
+                    "description": "\u0412\u0435\u0431\u0445\u0443\u043a \u043f\u0440\u0438\u043d\u044f\u0442"
+                  },
+                  "201": {
+                    "description": "\u0412\u0435\u0431\u0445\u0443\u043a \u043f\u0440\u0438\u043d\u044f\u0442"
+                  },
+                  "405": {
+                    "description": "\u041c\u0435\u0440\u0447\u0430\u043d\u0442 \u043e\u0442\u043a\u043b\u043e\u043d\u0438\u043b \u0438\u0437\u043c\u0435\u043d\u0435\u043d\u0438\u0435 (\u0442\u043e\u043b\u044c\u043a\u043e \u0435\u0441\u043b\u0438 can_be_declined_by_merchant: true)"
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/v1/partner/balance": {
@@ -751,27 +812,27 @@
         "type": "object",
         "description": "Current state of a payment transaction",
         "required": [
-          "transaction_id",
+          "operation_id",
           "external_id",
-          "status",
-          "operation",
-          "sum",
+          "result",
+          "channel",
+          "requested_sum",
           "currency_code",
-          "created_at",
-          "updated_at"
+          "opened_at"
         ],
         "properties": {
-          "transaction_id": {
+          "operation_id": {
             "type": "string",
+            "format": "uuid",
             "description": "Internal FinZinc payment identifier",
-            "example": "txn_fin_123456"
+            "example": "019d8619-f711-76b7-b0e1-574328b5baf0"
           },
           "external_id": {
             "type": "string",
             "description": "Merchant-provided external identifier",
             "example": "ext_20260331_001"
           },
-          "status": {
+          "result": {
             "type": "string",
             "enum": [
               "awaiting",
@@ -782,63 +843,81 @@
               "error",
               "failed"
             ],
-            "description": "Payment status:\n- `pending` \u2014 created, awaiting payer action\n- `processing` \u2014 payment received, being verified\n- `success` \u2014 fully completed (COMPLETED)\n- `success_partial` \u2014 partially completed, funds received but less than requested (PARTIALLY_COMPLETED)\n- `success_adjusted` \u2014 completed with amount correction up or down (ADJUSTING_UP/ADJUSTING_DOWN confirmed)\n- `failed` \u2014 failed, expired, or cancelled",
-            "example": "success"
+            "description": "Payment status:\n- `awaiting` \u2014 created, waiting for payer action\n- `processing` \u2014 payment received, being verified\n- `success` \u2014 fully completed, funds settled\n- `success_partial` \u2014 partially completed, funds received but less than requested amount\n- `success_adjusted` \u2014 completed with amount correction up or down\n- `error` \u2014 payment encountered an error\n- `failed` \u2014 failed, expired, or cancelled",
+            "example": "awaiting"
           },
-          "operation": {
+          "channel": {
             "type": "string",
-            "enum": [
-              "deposit",
-              "withdrawal"
-            ],
-            "description": "Transaction type",
-            "example": "deposit"
+            "description": "Payment channel used (uppercased by server, e.g. UPI, UPI_PHONEPE, UPI_PAYTM, IMPS)",
+            "example": "UPI"
           },
-          "sum": {
+          "redirect_url": {
+            "type": "string",
+            "format": "uri",
+            "nullable": true,
+            "description": "Redirect URL for widget mode. null in H2H mode.",
+            "example": "https://paytopay3.pserv-iner.in/abc123"
+          },
+          "requested_sum": {
             "type": "string",
             "description": "Originally requested payment amount",
-            "example": "100.00"
+            "example": "300.00"
           },
-          "sum_processed": {
+          "client_amount": {
             "type": "string",
-            "description": "Actually processed amount. Present when differs from sum (success_partial or success_adjusted).",
-            "example": "150.00"
-          },
-          "correction": {
-            "type": "string",
-            "enum": [
-              "up",
-              "down"
-            ],
-            "description": "Direction of amount correction. Present only when status is success_adjusted.",
-            "example": "up"
+            "nullable": true,
+            "description": "Actual settled amount. null until payment is completed.",
+            "example": "300.00"
           },
           "currency_code": {
             "type": "string",
             "description": "Currency code (ISO 4217)",
             "example": "INR"
           },
-          "channel": {
+          "rejection_cause": {
             "type": "string",
-            "description": "Payment channel used",
-            "example": "upi"
+            "nullable": true,
+            "description": "Reason for rejection. Present when result is failed or error.",
+            "example": null
           },
-          "fail_reason": {
-            "type": "string",
-            "description": "Human-readable failure reason. Present only when status is failed.",
-            "example": "Payer did not complete payment within time limit"
+          "transfer_details": {
+            "type": "object",
+            "nullable": true,
+            "description": "Payment credentials for H2H mode. Contains upi_account and qr_code_data for UPI.",
+            "properties": {
+              "type": {
+                "type": "string",
+                "example": "upi"
+              },
+              "upi_account": {
+                "type": "string",
+                "example": "hdgsgs261@pty"
+              },
+              "qr_code_data": {
+                "type": "string",
+                "example": "upi://pay?pa=hdgsgs261@pty&pn=rigarbl&cu=INR&am=300"
+              }
+            }
           },
-          "created_at": {
+          "opened_at": {
             "type": "string",
             "format": "date-time",
             "description": "Payment creation timestamp",
-            "example": "2026-03-31T23:48:00Z"
+            "example": "2026-04-13T09:09:01.845Z"
           },
-          "updated_at": {
+          "settled_at": {
             "type": "string",
             "format": "date-time",
-            "description": "Last status update timestamp",
-            "example": "2026-03-31T23:51:00Z"
+            "nullable": true,
+            "description": "Settlement timestamp. null until completed.",
+            "example": null
+          },
+          "valid_until": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Payment expiry timestamp.",
+            "example": null
           }
         }
       },
