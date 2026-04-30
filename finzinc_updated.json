@@ -156,13 +156,13 @@
           "Payments"
         ],
         "summary": "Notify Payment Intent (H2H)",
-        "description": "Эндпоинт для H2H-интеграции (`server_mode: true`). Используется для сбора аналитики и фиксации намерения клиента совершить оплату. Мерчант вызывает этот метод, когда клиент нажимает кнопку 'Копировать реквизиты' или 'Оплатить' на кассе. Это позволяет контролировать статистику копирования реквизитов и попыток оплаты.",
+        "description": "Used in H2H mode (`server_mode: true`) to notify that the client has interacted with payment details (e.g., clicked 'Copy' or 'Paid' on merchant's side). This helps track conversion and payment attempts.",
         "operationId": "notifyPaymentPaid",
         "parameters": [
           {
             "name": "id",
             "in": "path",
-            "description": "Внутренний ID платежа (operation_id)",
+            "description": "Internal FinZinc payment identifier (operation_id)",
             "required": true,
             "schema": {
               "type": "string",
@@ -173,23 +173,18 @@
         ],
         "responses": {
           "200": {
-            "description": "Уведомление принято",
+            "description": "Notification accepted",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "properties": {
-                    "ok": {
-                      "type": "boolean",
-                      "example": true
-                    }
-                  }
+                  "example": {}
                 }
               }
             }
           },
           "401": {
-            "description": "Unauthorized — невалидный токен",
+            "description": "Unauthorized — invalid or missing token",
             "content": {
               "application/json": {
                 "schema": {
@@ -199,7 +194,7 @@
             }
           },
           "404": {
-            "description": "Платеж не найден",
+            "description": "Payment not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -246,13 +241,15 @@
                       "type": "string",
                       "format": "uuid"
                     },
+                    "external_id": {
+                      "type": "string"
+                    },
                     "result": {
                       "type": "string"
                     },
                     "transfer_details": {
                       "type": "object",
-                      "nullable": true,
-                      "description": "Реквизиты для оплаты в режиме H2H."
+                      "nullable": true
                     }
                   }
                 }
@@ -317,7 +314,12 @@
               "error",
               "failed"
             ]
-          }
+          },
+          "external_id": { "type": "string" },
+          "channel": { "type": "string" },
+          "requested_sum": { "type": "string" },
+          "currency_code": { "type": "string" },
+          "opened_at": { "type": "string", "format": "date-time" }
         }
       },
       "ErrorResponse": {
@@ -349,22 +351,4 @@
           "redirect_url"
         ],
         "properties": {
-          "sum": {
-            "type": "string"
-          },
-          "server_mode": {
-            "type": "boolean",
-            "description": "Host-to-host mode."
-          }
-        }
-      }
-    },
-    "securitySchemes": {
-      "Bearer": {
-        "type": "http",
-        "scheme": "bearer",
-        "bearerFormat": "JWT"
-      }
-    }
-  }
-}
+          "sum": { "type": "string" },
