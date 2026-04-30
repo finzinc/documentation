@@ -113,7 +113,8 @@
                     "type": "string",
                     "minLength": 10,
                     "maxLength": 22,
-                    "description": "Unique Transaction Reference number from the bank"
+                    "description": "Unique Transaction Reference number from the bank",
+                    "example": "123456789012"
                   },
                   "file": {
                     "type": "array",
@@ -131,16 +132,44 @@
         },
         "responses": {
           "201": {
-            "description": "Receipt uploaded successfully"
+            "description": "Receipt uploaded successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
           },
           "400": {
-            "description": "Bad request — missing or invalid UTR"
+            "description": "Bad request — missing or invalid UTR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "401": {
-            "description": "Unauthorized"
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "404": {
-            "description": "Payment not found"
+            "description": "Payment not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -247,11 +276,44 @@
                     "result": {
                       "type": "string"
                     },
+                    "channel": {
+                      "type": "string"
+                    },
+                    "requested_sum": {
+                      "type": "string"
+                    },
+                    "currency_code": {
+                      "type": "string"
+                    },
                     "transfer_details": {
                       "type": "object",
                       "nullable": true
+                    },
+                    "opened_at": {
+                      "type": "string",
+                      "format": "date-time"
                     }
                   }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -274,7 +336,32 @@
         "operationId": "getAccountBalance",
         "responses": {
           "200": {
-            "description": "Account balance retrieved successfully"
+            "description": "Account balance retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "balance": {
+                      "type": "string"
+                    },
+                    "currency": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -303,6 +390,9 @@
             "type": "string",
             "format": "uuid"
           },
+          "external_id": {
+            "type": "string"
+          },
           "result": {
             "type": "string",
             "enum": [
@@ -315,11 +405,36 @@
               "failed"
             ]
           },
-          "external_id": { "type": "string" },
-          "channel": { "type": "string" },
-          "requested_sum": { "type": "string" },
-          "currency_code": { "type": "string" },
-          "opened_at": { "type": "string", "format": "date-time" }
+          "channel": {
+            "type": "string"
+          },
+          "requested_sum": {
+            "type": "string"
+          },
+          "currency_code": {
+            "type": "string"
+          },
+          "opened_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "client_amount": {
+            "type": "string",
+            "nullable": true
+          },
+          "rejection_cause": {
+            "type": "string",
+            "nullable": true
+          },
+          "transfer_details": {
+            "type": "object",
+            "nullable": true
+          },
+          "settled_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
         }
       },
       "ErrorResponse": {
@@ -334,6 +449,10 @@
           },
           "message": {
             "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -351,4 +470,53 @@
           "redirect_url"
         ],
         "properties": {
-          "sum": { "type": "string" },
+          "sum": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d{1,2})?$"
+          },
+          "status_url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "currency_code": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$"
+          },
+          "external_id": {
+            "type": "string"
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "deposit",
+              "withdrawal"
+            ]
+          },
+          "scheme": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string"
+          },
+          "account_id": {
+            "type": "string"
+          },
+          "redirect_url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "server_mode": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "Bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}
